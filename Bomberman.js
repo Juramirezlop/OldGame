@@ -4,6 +4,11 @@
 let tablero;
 let jugador;
 let bombas = []; // Lista de bombas
+
+let enemigos = []; // Lista de enemigos
+let ultimaColision = 0; // Tiempo del último daño causado al jugador
+
+=======
 let enemigo;
 let music;
 let music_bomb;
@@ -34,6 +39,13 @@ function setup() {
   jugador = new Jugador();
   jugador.aparecer(1, 1);
   
+
+  for (let i = 0; i < 3; i++) {
+    let enemigo = new Balloon();
+    enemigo.aparecerAleatorio(tablero.grid);
+    enemigos.push(enemigo);
+  }
+
  // Reproduce la música en bucle
   if (music) {
     music.loop();
@@ -44,6 +56,7 @@ function setup() {
   is_power = new Power();
   power_type = int(random(1, 4));
   is_power.aparecerAleatorio(tablero.grid);
+  
 }
 
 function draw() {
@@ -53,7 +66,12 @@ function draw() {
   tablero.display();
   jugador.dibujar(tablero.cellSize);
   bombas.forEach((bomba) => bomba.dibujar(tablero.cellSize));
-  enemigo.dibujar(tablero.cellSize);
+  enemigos.forEach((enemigo) => {
+    enemigo.dibujar(tablero.cellSize);
+    enemigo.moverBalloon(tablero.grid);
+  });
+  detectarColisiones();
+
   
     console.log(power_type);
   if(power_type == 3){
@@ -66,7 +84,7 @@ function draw() {
   if(power_type == 1){
      is_power.dibujar_power_1(tablero.cellSize);
   }
- 
+
   dibujarVidas();
   } else {
     // Mensaje de espera
@@ -119,6 +137,19 @@ function dibujarVidas() {
     bezierVertex(20 + i * (heartSize + 10) - 5, 15, 20 + i * (heartSize + 10) - 10, 25, 20 + i * (heartSize + 10), 30);
     bezierVertex(20 + i * (heartSize + 10) + 10, 25, 20 + i * (heartSize + 10) + 5, 15, 20 + i * (heartSize + 10), 20);
     endShape(CLOSE);
+  }
+}
+
+function detectarColisiones() {
+  let tiempoActual = millis(); // Tiempo actual en milisegundos
+  if (tiempoActual - ultimaColision >= 1000) { // Verificar si ha pasado un segundo
+    enemigos.forEach((enemigo) => {
+      if (enemigo.x === jugador.x && enemigo.y === jugador.y) {
+        jugador.vida--;
+        ultimaColision = tiempoActual; // Actualizar el tiempo de la última colisión
+        console.log(`Jugador dañado por enemigo! Vida restante: ${jugador.vida}`);
+      }
+    });
   }
 }
 
@@ -352,26 +383,36 @@ class Bomba {
     }
   }
 
-dibujarExplosion(celdaTamaño, x, y, grid) {
-    // Detectar si hay una entidad en la posición afectada
-    if (jugador.x === x && jugador.y === y) {
-      jugador.vida--; // Reducir vida del jugador
-      console.log(`Jugador dañado! Vida restante: ${jugador.vida}`);
-    }
-    
-    if (grid && grid[y] && grid[y][x] !== undefined) {
-      if (grid[y][x] === 2) {
-        grid[y][x] = 1; // Cambiar bloques tipo 2 a tipo 1
+
+  dibujarExplosion(celdaTamaño, x, y, grid) {
+      // Detectar si hay un enemigo en la posición afectada
+      enemigos = enemigos.filter(enemigo => {
+        if (enemigo.x === x && enemigo.y === y) {
+          console.log(`Enemigo eliminado en (${x}, ${y})`);
+          return false; // Eliminar el enemigo
+        }
+        return true;
+      });
+      // Detectar si hay un jugador en la posición afectada
+      if (jugador.x === x && jugador.y === y) {
+        jugador.vida--; // Reducir vida del jugador
+        console.log(`Jugador dañado! Vida restante: ${jugador.vida}`);
+
+  
+      // Continuar con los efectos visuales de la explosión
+      if (grid && grid[y] && grid[y][x] !== undefined) {
+        if (grid[y][x] === 2) {
+          grid[y][x] = 1; // Cambiar bloques tipo 2 a tipo 1
+        }
+        if (grid[y][x] !== 0) { // Dibujar explosión solo si no es bloque sólido
+          let px = x * celdaTamaño;
+          let py = y * celdaTamaño;
+          fill(255, 165, 0, 150); // Naranja translúcido
+          noStroke();
+          ellipse(px + celdaTamaño / 2, py + celdaTamaño / 2, celdaTamaño);
+        }
       }
-      if (grid[y][x] !== 0) { // Dibujar explosión solo si no es bloque sólido
-        let px = x * celdaTamaño;
-        let py = y * celdaTamaño;
-        fill(255, 165, 0, 150); // Naranja translúcido
-        noStroke();
-        ellipse(px + celdaTamaño / 2, py + celdaTamaño / 2, celdaTamaño);
-      }
     }
-  }
 }
 
 
@@ -502,6 +543,8 @@ class Balloon extends Entidad {
   constructor() {
     super();
     this.vida = 1; // Vida específica del enemigo
+    this.direccion = { dx: 1, dy: 0 }; // Dirección inicial: derecha
+    this.velocidad = 0; // Velocidad en frames por movimiento (1 casilla por segundo)
   }
 
   aparecerAleatorio(grid) {
@@ -524,6 +567,37 @@ class Balloon extends Entidad {
       this.x = pos.x;
       this.y = pos.y;
     }
+  }
+  
+  moverBalloon(grid) {
+    while (this.velocidad == 20){
+      const nuevaX = this.x + this.direccion.dx;
+      const nuevaY = this.y + this.direccion.dy;
+  
+      // Comprobar si puede moverse en la dirección actual
+      if (grid[nuevaY] && grid[nuevaY][nuevaX] === 1 && !bombas.some(bomba => bomba.x === nuevaX && bomba.y === nuevaY)) {
+        this.x = nuevaX;
+        this.y = nuevaY;
+      } else {
+        // Cambiar dirección si encuentra un obstáculo
+        this.direccion.dx *= -1;
+        this.direccion.dy *= -1;
+      }
+  
+      // Cambiar dirección aleatoriamente cada 5 movimientos
+      this.movimientos++;
+      if (this.movimientos % 5 === 0) {
+        const direcciones = [
+          { dx: 1, dy: 0 }, // Derecha
+          { dx: -1, dy: 0 }, // Izquierda
+          { dx: 0, dy: 1 }, // Abajo
+          { dx: 0, dy: -1 } // Arriba
+        ];
+        this.direccion = random(direcciones);
+      }
+      this.velocidad = 0;
+    }
+    this.velocidad++;
   }
 
   dibujar(celdaTamaño) {

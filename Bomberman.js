@@ -1,31 +1,102 @@
+
+
 // Configuración inicial
 let tablero;
 let jugador;
 let bombas = []; // Lista de bombas
 let enemigo;
+let music;
+let music_bomb;
+let is_power;
+let power_type;
+let size_bomb;
+let iniciado = false; // Variable para controlar si el juego está iniciado
+
+function preload() {
+  // Carga el archivo de audio
+ music = loadSound('ambient_music.mp3');
+ music_bomb = loadSound('music_bomb.mp3');
+}
 
 function setup() {
   createCanvas(680, 680); // Cada celda será de 40x40 px
+  
+  
+ // Crear el botón de "Play"
+  botonPlay = createButton('PLAY');
+  botonPlay.style('font-size', '32px'); // Tamaño de la fuente más grande
+  botonPlay.style('padding', '10px 20px'); // Añadir espacio interno al botón
+  botonPlay.position(width / 2 - 75, height / 2 - 30); // Centrar el botón
+  botonPlay.mousePressed(iniciarJuego); // Llamar a iniciarJuego cuando se presiona
+  /////////////////
+  
   tablero = new Tablero(17, 17);
   jugador = new Jugador();
   jugador.aparecer(1, 1);
   
+ // Reproduce la música en bucle
+  if (music) {
+    music.loop();
+  }
+  
   enemigo = new Balloon();
   enemigo.aparecerAleatorio(tablero.grid);
+  is_power = new Power();
+  power_type = int(random(1, 4));
+  is_power.aparecerAleatorio(tablero.grid);
 }
 
 function draw() {
-  background(220);
+   background(220);
+  
+  if (iniciado) {
   tablero.display();
   jugador.dibujar(tablero.cellSize);
   bombas.forEach((bomba) => bomba.dibujar(tablero.cellSize));
   enemigo.dibujar(tablero.cellSize);
+  
+    console.log(power_type);
+  if(power_type == 3){
+     is_power.dibujar_power_3(tablero.cellSize);
+  } 
+  if (power_type == 2){
+     is_power.dibujar_power_2(tablero.cellSize);
+  }
+  
+  if(power_type == 1){
+     is_power.dibujar_power_1(tablero.cellSize);
+  }
+ 
   dibujarVidas();
+  } else {
+    // Mensaje de espera
+    fill(0);
+    textSize(20);
+    textAlign(CENTER, CENTER);
+    text('Presiona Play para iniciar', width / 2, height / 2 + 50);
+  }
+
+  
 }
+
+
+
+function iniciarJuego() {
+  iniciado = true; // Cambiar el estado a iniciado
+  botonPlay.hide(); // Ocultar el botón después de presionarlo
+}
+
+
+
+
+
+
 
 function keyPressed() {
   if (keyCode === 32) { // Espacio
-    jugador.ponerBomba();
+    if(bombas.length < jugador.cant_nuke){
+          jugador.ponerBomba();
+    }  
   }
   if (keyCode === UP_ARROW) {
     jugador.mover(0, -1, tablero.grid);
@@ -188,9 +259,12 @@ class Entidad {
 
 // Clase Jugador
 class Jugador extends Entidad {
+  
   constructor() {
     super();
+    this.cant_nuke = 1;
     this.vida = 3; // Vida específica del jugador
+    this.size_nuke = 1;
   }
 
   ponerBomba() {
@@ -259,14 +333,17 @@ class Bomba {
   }
 
   explotar(celdaTamaño, grid) {
+    music_bomb.play();
     this.explosionFrames = 30; // Duración de la animación de la explosión (30 frames)
-
     // Dibujar la explosión en los cuadros aledaños
-    this.dibujarExplosion(celdaTamaño, this.x, this.y, grid);
-    this.dibujarExplosion(celdaTamaño, this.x + 1, this.y, grid);
-    this.dibujarExplosion(celdaTamaño, this.x - 1, this.y, grid);
-    this.dibujarExplosion(celdaTamaño, this.x, this.y + 1, grid);
-    this.dibujarExplosion(celdaTamaño, this.x, this.y - 1, grid);
+    
+        for (let i = 1; i <= jugador.size_nuke; i++) {
+              this.dibujarExplosion(celdaTamaño, this.x, this.y, grid);
+              this.dibujarExplosion(celdaTamaño, this.x + i, this.y, grid);
+              this.dibujarExplosion(celdaTamaño, this.x - i, this.y, grid);
+              this.dibujarExplosion(celdaTamaño, this.x, this.y + i, grid);
+              this.dibujarExplosion(celdaTamaño, this.x, this.y - i, grid);
+        }
 
     // Eliminar la bomba después de la explosión
     let index = bombas.indexOf(this);
@@ -281,6 +358,7 @@ dibujarExplosion(celdaTamaño, x, y, grid) {
       jugador.vida--; // Reducir vida del jugador
       console.log(`Jugador dañado! Vida restante: ${jugador.vida}`);
     }
+    
     if (grid && grid[y] && grid[y][x] !== undefined) {
       if (grid[y][x] === 2) {
         grid[y][x] = 1; // Cambiar bloques tipo 2 a tipo 1
@@ -294,6 +372,130 @@ dibujarExplosion(celdaTamaño, x, y, grid) {
       }
     }
   }
+}
+
+
+class Power extends Entidad {
+  constructor() {
+    super();
+    this.vida = 1; // Vida específica del jugador
+  }
+  
+  
+    aparecerAleatorio(grid) {
+    let posicionesValidas = [];
+
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        if (
+          grid[y][x] === 1 && // Solo en bloques de pasto
+          !(x === 1 && y === 1) && // Excluir esquina superior izquierda
+          !(x === grid[0].length - 2 && y === grid.length - 2) // Excluir esquina inferior derecha
+        ) {
+          posicionesValidas.push({ x, y });
+        }
+      }
+    }
+
+    if (posicionesValidas.length > 0) {
+      let pos = random(posicionesValidas);
+      this.x = pos.x;
+      this.y = pos.y;
+    }
+  }
+  
+
+
+
+dibujar_power_1(celdaTamaño) {
+  let px = this.x * celdaTamaño;
+  let py = this.y * celdaTamaño;
+  let cx = px + celdaTamaño / 2; // Coordenada x del centro
+  let cy = py + celdaTamaño / 2; // Coordenada y del centro
+  let radioExterno = celdaTamaño * 0.4; // Radio externo de la estrella
+  let radioInterno = celdaTamaño * 0.2; // Radio interno de la estrella
+  let numPicos = 5; // Número de picos de la estrella
+
+  fill(255, 223, 0); // Color amarillo para la estrella
+  noStroke();
+
+  beginShape();
+  for (let i = 0; i < numPicos * 2; i++) {
+    let angulo = (PI / numPicos) * i;
+    let radio = i % 2 === 0 ? radioExterno : radioInterno;
+    let x = cx + cos(angulo) * radio;
+    let y = cy + sin(angulo) * radio;
+    vertex(x, y);
+  }
+  endShape(CLOSE);
+
+   if (jugador.x === this.x && jugador.y === this.y) {
+      jugador.cant_nuke++; // Reducir vida del jugador
+      console.log(`Cantidad Bombas: ${jugador.cant_nuke}`);
+      power_type = int(random(1, 4));
+      is_power.aparecerAleatorio(tablero.grid);
+    }
+}
+
+dibujar_power_3(celdaTamaño) {
+  let px = this.x * celdaTamaño;
+  let py = this.y * celdaTamaño;
+  let cx = px + celdaTamaño / 2;
+  let cy = py + celdaTamaño / 2;
+
+  noStroke();
+  for (let i = 0; i < 5; i++) {
+    fill(255, random(50, 150), 0, 150 - i * 30); // Degradado de color
+    beginShape();
+    for (let angulo = 0; angulo < TWO_PI; angulo += PI / 8) {
+      let offset = random(-celdaTamaño * 0.05, celdaTamaño * 0.05);
+      let radio = celdaTamaño * 0.3 + offset + i * 5;
+      let x = cx + cos(angulo) * radio;
+      let y = cy - sin(angulo) * radio; // Fuego se extiende hacia arriba
+      vertex(x, y);
+    }
+    endShape(CLOSE);
+  }
+    if (jugador.x === this.x && jugador.y === this.y) {
+      jugador.size_nuke++; // Reducir vida del jugador
+      console.log(`Cantidad Bombas: ${jugador.size_nuke}`);
+       power_type = int(random(1, 4));
+      is_power.aparecerAleatorio(tablero.grid);
+    }
+}
+
+dibujar_power_2(celdaTamaño) {
+  let px = this.x * celdaTamaño;
+  let py = this.y * celdaTamaño;
+  let cx = px + celdaTamaño / 2; // Centro en x
+  let cy = py + celdaTamaño / 2; // Centro en y
+  let escala = celdaTamaño / 40; // Reducimos más la escala para que encaje en la celda
+
+  fill(255, 0, 127); // Color rosado fuerte
+  noStroke();
+
+  beginShape();
+  for (let t = 0; t < TWO_PI; t += 0.01) {
+    // Fórmula paramétrica del corazón ajustada a la nueva escala
+    let x = escala * 16 * pow(sin(t), 3);
+    let y = -escala * (13 * cos(t) - 5 * cos(2 * t) - 2 * cos(3 * t) - cos(4 * t));
+    vertex(cx + x, cy + y);
+  }
+  endShape(CLOSE);
+      if (jugador.x === this.x && jugador.y === this.y) {
+      jugador.vida++;
+      console.log(`Cantidad Bombas: ${jugador.cant_nuke}`);
+      power_type = int(random(1, 4));
+      is_power.aparecerAleatorio(tablero.grid);
+    }
+  
+  
+}
+
+
+
+
+  
 }
 
 class Balloon extends Entidad {

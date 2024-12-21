@@ -16,7 +16,9 @@ let is_power;
 let power_type;
 let size_bomb;
 let iniciado = false; // Variable para controlar si el juego está iniciado
-let bloqueirrompible, bloquedebil, pasto;
+let bloqueirrompible, bloqueirrompible2, bloqueirrompible3;
+let bloquedebil, bloquedebil2, bloquedebil3;
+let pasto, pasto2, pasto3;
 let prota;
 
 //control de niveles prototipo
@@ -36,8 +38,14 @@ function preload() {
   music = loadSound("ambient_music.mp3");
   music_bomb = loadSound("music_bomb.mp3");
   pasto = loadImage("Pasto.JPG");
+  pasto2 = loadImage("Pasto2.JPG");
+  pasto3 = loadImage("Pasto3.JPG");
   bloqueirrompible = loadImage("Ladrillo.JPG");
+  bloqueirrompible2 = loadImage("Ladrillo2.JPG");
+  bloqueirrompible3 = loadImage("Ladrillo3.JPG");
   bloquedebil = loadImage("LadrilloDebil.JPG");
+  bloquedebil2 = loadImage("LadrilloDebil2.JPG");
+  bloquedebil3 = loadImage("LadrilloDebil3.JPG");
   prota = loadImage("Prota.PNG");
 }
 
@@ -317,21 +325,41 @@ class Tablero {
   }
 
   drawSolidBlock(x, y) {
-    // Usar imagen para el bloque sólido
-    image(bloqueirrompible, x, y, this.cellSize, this.cellSize);
+    if(nivelactual == 1){
+      image(bloqueirrompible, x, y, this.cellSize, this.cellSize);
+    }
+    else if(nivelactual == 2){
+      image(bloqueirrompible2, x, y, this.cellSize, this.cellSize);
+    }
+    else{
+      image(bloqueirrompible3, x, y, this.cellSize, this.cellSize);
+    }
   }
 
   drawGrassBlock(x, y) {
-    // Usar imagen para el bloque de pasto
-    image(pasto, x, y, this.cellSize, this.cellSize);
-  }
+    if(nivelactual == 1){
+      image(pasto, x, y, this.cellSize, this.cellSize);
+    }
+    else if(nivelactual == 2){
+      image(pasto2, x, y, this.cellSize, this.cellSize);
+    }
+    else{
+      image(pasto3, x, y, this.cellSize, this.cellSize);
+    }
+    }
 
   drawBrickBlock(x, y) {
-    // Usar imagen para el bloque de ladrillo
-    image(bloquedebil, x, y, this.cellSize, this.cellSize);
-  }
+    if(nivelactual == 1){
+      image(bloquedebil, x, y, this.cellSize, this.cellSize);
+    }
+    else if(nivelactual == 2){
+      image(bloquedebil2, x, y, this.cellSize, this.cellSize);
+    }
+    else{
+      image(bloquedebil3, x, y, this.cellSize, this.cellSize);
+    }
+    }
 }
-
 // Clase Entidad
 class Entidad {
   constructor() {
@@ -622,41 +650,139 @@ class Balloon extends Entidad {
       this.y = pos.y;
     }
   }
-
+  
   moverBalloon(grid) {
-    while (this.velocidad == 15) {
-      const nuevaX = this.x + this.direccion.dx;
-      const nuevaY = this.y + this.direccion.dy;
-
-      // Comprobar si puede moverse en la dirección actual
-      if (
-        grid[nuevaY] &&
-        grid[nuevaY][nuevaX] === 1 &&
-        !bombas.some((bomba) => bomba.x === nuevaX && bomba.y === nuevaY)
-      ) {
-        this.x = nuevaX;
-        this.y = nuevaY;
-      } else {
-        // Cambiar dirección si encuentra un obstáculo
-        this.direccion.dx *= -1;
-        this.direccion.dy *= -1;
+    if (this.velocidad > 0) {
+      this.velocidad--; // Disminuimos el contador de velocidad
+      return; 
+    }
+  
+    // Contador para los pasos del enemigo
+    if (!this.contadorPasos) {
+      this.contadorPasos = 0;
+    }
+  
+    // Incrementamos el contador de pasos
+    this.contadorPasos++;
+  
+    const direcciones = [
+      { dx: 1, dy: 0 },  // Derecha
+      { dx: -1, dy: 0 }, // Izquierda
+      { dx: 0, dy: 1 },  // Abajo
+      { dx: 0, dy: -1 }, // Arriba
+    ];
+  
+    // Si ya se ha alcanzado el número de pasos, cambiamos la dirección
+    if (this.contadorPasos >= 8) {
+      this.contadorPasos = 0; // Reiniciamos el contador de pasos
+  
+      // Intentamos mover en cualquier dirección válida, pero no hacia atrás
+      let direccionesPosibles = direcciones.filter(dir => {
+        const nuevaX = this.x + dir.dx;
+        const nuevaY = this.y + dir.dy;
+  
+        // Comprobamos si la nueva posición es válida 
+        return (
+          grid[nuevaY] && 
+          grid[nuevaY][nuevaX] === 1 && 
+          !bombas.some(bomba => bomba.x === nuevaX && bomba.y === nuevaY) &&
+          // Evitar retroceder (evitamos la dirección opuesta a la anterior)
+          !(this.direccionAnterior && dir.dx === -this.direccionAnterior.dx && dir.dy === -this.direccionAnterior.dy)
+        );
+      });
+  
+      // Si encontramos direcciones posibles, elegimos una aleatoria
+      if (direccionesPosibles.length > 0) {
+        const direccionAleatoria = random(direccionesPosibles);
+        this.x += direccionAleatoria.dx;
+        this.y += direccionAleatoria.dy;
+  
+        // Actualizamos la dirección anterior
+        this.direccionAnterior = { dx: direccionAleatoria.dx, dy: direccionAleatoria.dy };
       }
-
-      // Cambiar dirección aleatoriamente cada 4 movimientos
-      this.movimientos++;
-      if (this.movimientos % 4 === 0) {
-        const direcciones = [
-          { dx: 1, dy: 0 }, // Derecha
-          { dx: -1, dy: 0 }, // Izquierda
-          { dx: 0, dy: 1 }, // Abajo
+    } else {
+      // Si no se ha alcanzado el conteo, buscamos un camino alternativo si está bloqueado
+      let direccionesPosibles = direcciones.filter(dir => {
+        const nuevaX = this.x + dir.dx;
+        const nuevaY = this.y + dir.dy;
+  
+        // Comprobamos si la nueva posición es válida 
+        return (
+          grid[nuevaY] && 
+          grid[nuevaY][nuevaX] === 1 && 
+          !bombas.some(bomba => bomba.x === nuevaX && bomba.y === nuevaY) &&
+          // Evitar retroceder
+          !(this.direccionAnterior && dir.dx === -this.direccionAnterior.dx && dir.dy === -this.direccionAnterior.dy)
+        );
+      });
+  
+      // Si no hay direcciones válidas, intentamos mover de forma alternativa (vertical u horizontal)
+      if (direccionesPosibles.length === 0) {
+        // Si está bloqueado horizontalmente, intentamos mover verticalmente
+        const puedeMoverVertical = [
+          { dx: 0, dy: 1 },  // Abajo
           { dx: 0, dy: -1 }, // Arriba
         ];
-        this.direccion = random(direcciones);
+        let movVertical = puedeMoverVertical.filter(dir => {
+          const nuevaX = this.x + dir.dx;
+          const nuevaY = this.y + dir.dy;
+          
+          return (
+            grid[nuevaY] && 
+            grid[nuevaY][nuevaX] === 1 && 
+            !bombas.some(bomba => bomba.x === nuevaX && bomba.y === nuevaY)
+          );
+        });
+        
+        if (movVertical.length > 0) {
+          // Elegimos aleatoriamente un movimiento vertical
+          const direccionAleatoria = random(movVertical);
+          this.x += direccionAleatoria.dx;
+          this.y += direccionAleatoria.dy;
+  
+          // Actualizamos la dirección anterior
+          this.direccionAnterior = { dx: direccionAleatoria.dx, dy: direccionAleatoria.dy };
+        } else {
+          // Si tampoco hay movimiento vertical posible, buscamos movimiento horizontal
+          const puedeMoverHorizontal = [
+            { dx: 1, dy: 0 },  // Derecha
+            { dx: -1, dy: 0 }, // Izquierda
+          ];
+          let movHorizontal = puedeMoverHorizontal.filter(dir => {
+            const nuevaX = this.x + dir.dx;
+            const nuevaY = this.y + dir.dy;
+            
+            return (
+              grid[nuevaY] && 
+              grid[nuevaY][nuevaX] === 1 && 
+              !bombas.some(bomba => bomba.x === nuevaX && bomba.y === nuevaY)
+            );
+          });
+  
+          if (movHorizontal.length > 0) {
+            // Elegimos aleatoriamente un movimiento horizontal
+            const direccionAleatoria = random(movHorizontal);
+            this.x += direccionAleatoria.dx;
+            this.y += direccionAleatoria.dy;
+  
+            // Actualizamos la dirección anterior
+            this.direccionAnterior = { dx: direccionAleatoria.dx, dy: direccionAleatoria.dy };
+          }
+        }
+      } else {
+        // Si hay direcciones válidas, nos movemos hacia una aleatoria
+        const direccionAleatoria = random(direccionesPosibles);
+        this.x += direccionAleatoria.dx;
+        this.y += direccionAleatoria.dy;
+  
+        // Actualizamos la dirección anterior
+        this.direccionAnterior = { dx: direccionAleatoria.dx, dy: direccionAleatoria.dy };
       }
-      this.velocidad = 0;
     }
-    this.velocidad++;
-  }
+  
+    // Establecemos la velocidad para el siguiente movimiento
+    this.velocidad = 25;
+  }  
 
   dibujar(celdaTamaño) {
     let px = this.x * celdaTamaño;

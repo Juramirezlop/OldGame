@@ -7,8 +7,6 @@ let bombas = []; // Lista de bombas
 
 let enemigos = []; // Lista de enemigos
 let ultimaColision = 0; // Tiempo del último daño causado al jugador
-
-=======
 let enemigo;
 let music;
 let music_bomb;
@@ -382,10 +380,10 @@ class Bomba {
       bombas.splice(index, 1);
     }
   }
-
-
+  
   dibujarExplosion(celdaTamaño, x, y, grid) {
-      // Detectar si hay un enemigo en la posición afectada
+    
+          // Detectar si hay un enemigo en la posición afectada
       enemigos = enemigos.filter(enemigo => {
         if (enemigo.x === x && enemigo.y === y) {
           console.log(`Enemigo eliminado en (${x}, ${y})`);
@@ -393,26 +391,26 @@ class Bomba {
         }
         return true;
       });
-      // Detectar si hay un jugador en la posición afectada
-      if (jugador.x === x && jugador.y === y) {
-        jugador.vida--; // Reducir vida del jugador
-        console.log(`Jugador dañado! Vida restante: ${jugador.vida}`);
-
-  
-      // Continuar con los efectos visuales de la explosión
-      if (grid && grid[y] && grid[y][x] !== undefined) {
-        if (grid[y][x] === 2) {
-          grid[y][x] = 1; // Cambiar bloques tipo 2 a tipo 1
-        }
-        if (grid[y][x] !== 0) { // Dibujar explosión solo si no es bloque sólido
-          let px = x * celdaTamaño;
-          let py = y * celdaTamaño;
-          fill(255, 165, 0, 150); // Naranja translúcido
-          noStroke();
-          ellipse(px + celdaTamaño / 2, py + celdaTamaño / 2, celdaTamaño);
-        }
+    
+    // Detectar si hay una entidad en la posición afectada
+    if (jugador.x === x && jugador.y === y) {
+      jugador.vida--; // Reducir vida del jugador
+      console.log(`Jugador dañado! Vida restante: ${jugador.vida}`);
+    }
+    
+    if (grid && grid[y] && grid[y][x] !== undefined) {
+      if (grid[y][x] === 2) {
+        grid[y][x] = 1; // Cambiar bloques tipo 2 a tipo 1
+      }
+      if (grid[y][x] !== 0) { // Dibujar explosión solo si no es bloque sólido
+        let px = x * celdaTamaño;
+        let py = y * celdaTamaño;
+        fill(255, 165, 0, 150); // Naranja translúcido
+        noStroke();
+        ellipse(px + celdaTamaño / 2, py + celdaTamaño / 2, celdaTamaño);
       }
     }
+  }
 }
 
 
@@ -530,12 +528,7 @@ dibujar_power_2(celdaTamaño) {
       is_power.aparecerAleatorio(tablero.grid);
     }
   
-  
 }
-
-
-
-
   
 }
 

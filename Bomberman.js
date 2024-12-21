@@ -5,6 +5,10 @@ let bombas = []; // Lista de bombas
 let msg = "Presiona Play para iniciar";
 let enemigos = []; // Lista de enemigos
 let ultimaColision = 0; // Tiempo del último daño causado al jugador
+let nivelactual = 1;
+let mensajeDeNivel = false; // Visualización del mensaje
+let termino = true;
+let tiempoMensaje = 0; 
 let enemigo;
 let music;
 let music_bomb;
@@ -12,6 +16,16 @@ let is_power;
 let power_type;
 let size_bomb;
 let iniciado = false; // Variable para controlar si el juego está iniciado
+let bloqueirrompible, bloquedebil, pasto;
+let prota;
+
+//control de niveles prototipo
+const niveles = {
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4
+};
 
 //timer
 let timer = 120; // Tiempo inicial en segundos
@@ -21,6 +35,10 @@ function preload() {
   // Carga el archivo de audio
   music = loadSound("ambient_music.mp3");
   music_bomb = loadSound("music_bomb.mp3");
+  pasto = loadImage("Pasto.JPG");
+  bloqueirrompible = loadImage("Ladrillo.JPG");
+  bloquedebil = loadImage("LadrilloDebil.JPG");
+  prota = loadImage("Prota.PNG");
 }
 
 function setup() {
@@ -40,17 +58,12 @@ function setup() {
   jugador = new Jugador();
   jugador.aparecer(1, 1);
 
-  for (let i = 0; i < 3; i++) {
-    let enemigo = new Balloon();
-    enemigo.aparecerAleatorio(tablero.grid);
-    enemigos.push(enemigo);
-  }
-
   // Reproduce la música en bucle
   if (music) {
     music.loop();
   }
 
+  generarEnemigos();
   enemigo = new Balloon();
   enemigo.aparecerAleatorio(tablero.grid);
   is_power = new Power();
@@ -98,6 +111,15 @@ function draw() {
     textAlign(CENTER, CENTER);
     text(msg, width / 2, height / 2 + 50);
   }
+
+  if (mensajeDeNivel) {
+    fill(0, 0, 0, 150);
+    rect(0, height / 3, width, 100);
+    fill(255);
+    textSize(40);
+    textAlign(CENTER, CENTER);
+    text(msg, width / 2, height / 3 + 50); // El mensaje que aparece en pantalla
+  }
 }
 
 // Función para actualizar el temporizador
@@ -108,6 +130,43 @@ function updateTimer() {
     clearInterval(interval); // Detiene el temporizador cuando llega a 0
     jugador.vida = 0;
   }
+}
+
+function generarEnemigos() {
+  const cantidadEnemigos = niveles[nivelactual];
+  
+  for (let i = 0; i < cantidadEnemigos; i++) {
+      const enemigo = new Balloon(); // Asumiendo que tienes una clase Enemigo
+      enemigo.aparecerAleatorio(tablero.grid);
+      enemigos.push(enemigo);
+  }
+}
+
+function pasarDeNivel() {
+  nivelactual++;
+  if (nivelactual > 4) {
+      nivelactual = 1; // Resetear si llegamos al nivel 5
+  }
+
+  mensajeDeNivel = true;
+  msg = "¡Excelente! Pasaste de nivel";
+  tiempoMensaje = millis(); // Marcar el tiempo en el que apareció el mensaje
+  setTimeout(() => {
+    mensajeDeNivel = false; // Ocultar el mensaje después de un tiempo
+  }, 500);
+  cargarNuevoMapa();
+}
+
+function cargarNuevoMapa() {
+  console.log('Cargando nuevo mapa...');
+  tablero = new Tablero(17, 17);
+  jugador.aparecer(1, 1);
+  bombas = []
+  generarEnemigos();
+  power_type = int(random(1, 4));
+  is_power.aparecerAleatorio(tablero.grid);
+  timer = 120; // Resetear temporizador
+  iniciarJuego()
 }
 
 function iniciarJuego() {
@@ -189,7 +248,6 @@ function detectarColisiones() {
   }
 }
 
-// Clase Tablero
 class Tablero {
   constructor(rows, cols) {
     this.rows = rows;
@@ -259,40 +317,18 @@ class Tablero {
   }
 
   drawSolidBlock(x, y) {
-    fill(100); // Gris oscuro
-    rect(x, y, this.cellSize, this.cellSize);
-    strokeWeight(2);
-    line(x, y, x + this.cellSize, y); // Borde superior
-    line(x, y, x, y + this.cellSize); // Borde izquierdo
-    line(x + this.cellSize, y, x + this.cellSize, y + this.cellSize); // Borde derecho
-    line(x, y + this.cellSize, x + this.cellSize, y + this.cellSize); // Borde inferior
-    strokeWeight(1);
+    // Usar imagen para el bloque sólido
+    image(bloqueirrompible, x, y, this.cellSize, this.cellSize);
   }
 
   drawGrassBlock(x, y) {
-    fill(34, 139, 34); // Verde oscuro
-    rect(x, y, this.cellSize, this.cellSize);
-    stroke(0, 100, 0);
-    for (let i = 0; i < this.cellSize; i += 8) {
-      line(x + i, y, x + i + 4, y + this.cellSize); // Zig-zag verde claro
-      line(x + i + 4, y, x + i, y + this.cellSize); // Zig-zag verde oscuro
-    }
+    // Usar imagen para el bloque de pasto
+    image(pasto, x, y, this.cellSize, this.cellSize);
   }
 
   drawBrickBlock(x, y) {
-    fill(169, 169, 169); // Gris claro
-    rect(x, y, this.cellSize, this.cellSize);
-    stroke(105, 105, 105);
-    for (let i = 0; i < this.cellSize; i += 10) {
-      line(x, y + i, x + this.cellSize, y + i); // Líneas horizontales discontinuas
-    }
-    for (let i = 0; i < this.cellSize; i += 10) {
-      if ((y / 10) % 2 === 0) {
-        line(x + i, y, x + i, y + this.cellSize); // Líneas verticales discontinuas
-      } else {
-        line(x + i + 5, y, x + i + 5, y + this.cellSize);
-      }
-    }
+    // Usar imagen para el bloque de ladrillo
+    image(bloquedebil, x, y, this.cellSize, this.cellSize);
   }
 }
 
@@ -356,33 +392,7 @@ class Jugador extends Entidad {
     let y = this.y * celdaTamaño;
     noStroke();
 
-    // Cabeza
-    fill(255, 224, 189); // Color piel
-    rect(x + 12, y + 6, 16, 16);
-
-    // Casco
-    fill(255, 0, 0); // Rojo
-    rect(x + 10, y + 4, 20, 12);
-    rect(x + 12, y + 2, 16, 4);
-
-    // Ojos
-    fill(0); // Negro
-    rect(x + 16, y + 10, 4, 4);
-    rect(x + 24, y + 10, 4, 4);
-
-    // Cuerpo
-    fill(0, 0, 255); // Azul
-    rect(x + 14, y + 22, 12, 16);
-
-    // Brazos
-    fill(255, 0, 0); // Rojo
-    rect(x + 10, y + 22, 4, 12);
-    rect(x + 26, y + 22, 4, 12);
-
-    // Piernas
-    fill(0);
-    rect(x + 12, y + 35, 4, 8);
-    rect(x + 20, y + 35, 4, 8);
+    image(prota, x, y, 40, 40);
   }
 }
 
@@ -416,7 +426,7 @@ class Bomba {
 
   explotar(celdaTamaño, grid) {
     music_bomb.play();
-    this.explosionFrames = 30; // Duración de la animación de la explosión (30 frames)
+    this.explosionFrames = 25; // Duración de la animación de la explosión (30 frames)
     // Dibujar la explosión en los cuadros aledaños
 
     for (let i = 1; i <= jugador.size_nuke; i++) {
@@ -443,6 +453,10 @@ class Bomba {
       }
       return true;
     });
+
+    if (enemigos.length === 0) {
+      pasarDeNivel();
+    }
 
     // Detectar si hay una entidad en la posición afectada
     if (jugador.x === x && jugador.y === y) {
@@ -610,7 +624,7 @@ class Balloon extends Entidad {
   }
 
   moverBalloon(grid) {
-    while (this.velocidad == 20) {
+    while (this.velocidad == 15) {
       const nuevaX = this.x + this.direccion.dx;
       const nuevaY = this.y + this.direccion.dy;
 
@@ -628,9 +642,9 @@ class Balloon extends Entidad {
         this.direccion.dy *= -1;
       }
 
-      // Cambiar dirección aleatoriamente cada 5 movimientos
+      // Cambiar dirección aleatoriamente cada 4 movimientos
       this.movimientos++;
-      if (this.movimientos % 5 === 0) {
+      if (this.movimientos % 4 === 0) {
         const direcciones = [
           { dx: 1, dy: 0 }, // Derecha
           { dx: -1, dy: 0 }, // Izquierda
@@ -667,10 +681,6 @@ class Balloon extends Entidad {
     arc(
       px + celdaTamaño / 2,
       py + celdaTamaño / 2 + celdaTamaño * 0.05,
-      celdaTamaño * 0.4,
-      celdaTamaño * 0.2,
-      0,
-      PI
-    );
+      celdaTamaño * 0.4, celdaTamaño * 0.2, 0, PI);
   }
 }

@@ -21,6 +21,7 @@ function preload() {
   // Carga el archivo de audio
   music = loadSound("ambient_music.mp3");
   music_bomb = loadSound("music_bomb.mp3");
+  fuego_img = loadImage("fuego.jpeg");
 }
 
 function setup() {
@@ -419,8 +420,14 @@ class Bomba {
     this.explosionFrames = 30; // Duración de la animación de la explosión (30 frames)
     // Dibujar la explosión en los cuadros aledaños
 
-    for (let i = 1; i <= jugador.size_nuke; i++) {
-      this.dibujarExplosion(celdaTamaño, this.x, this.y, grid);
+    // for (let i = 1; i <= jugador.size_nuke; i++) {
+    //   this.dibujarExplosion(celdaTamaño, this.x, this.y, grid);
+    //   this.dibujarExplosion(celdaTamaño, this.x + i / 100, this.y, grid);
+    //   this.dibujarExplosion(celdaTamaño, this.x - i / 100, this.y, grid);
+    //   this.dibujarExplosion(celdaTamaño, this.x, this.y + i / 100, grid);
+    //   this.dibujarExplosion(celdaTamaño, this.x, this.y - i / 100, grid);
+    // }
+    for (let i = 0.2; i < 600; i += 0.1) {
       this.dibujarExplosion(celdaTamaño, this.x + i, this.y, grid);
       this.dibujarExplosion(celdaTamaño, this.x - i, this.y, grid);
       this.dibujarExplosion(celdaTamaño, this.x, this.y + i, grid);
@@ -458,9 +465,16 @@ class Bomba {
         // Dibujar explosión solo si no es bloque sólido
         let px = x * celdaTamaño;
         let py = y * celdaTamaño;
-        fill(255, 165, 0, 150); // Naranja translúcido
+        //fill(255, 200, 50, 150); // Naranja translúcido
+        fill(255, random(50, 150), 0); // Degradado de color
         noStroke();
         ellipse(px + celdaTamaño / 2, py + celdaTamaño / 2, celdaTamaño);
+        // image(
+        //   fuego_img,
+        //   px + celdaTamaño / 2,
+        //   py + celdaTamaño / 2,
+        //   celdaTamaño
+        // );
       }
     }
   }
